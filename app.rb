@@ -1,10 +1,7 @@
 # app.rb
 require 'sinatra'
 require 'sinatra/reloader' if development?
-
-# Variables globales para almacenar los datos de la compra actual
-set :productos, []
-set :total_general, 0
+require_relative 'db/compotasdb'
 
 # Método para calcular el descuento y la venta neta
 def calcular_descuento(tipo, cantidad)
@@ -35,7 +32,18 @@ end
 
 # Ruta principal para mostrar la interfaz de compra
 get '/' do
-  erb :index, locals: { productos: settings.productos, total_general: settings.total_general }
+  productos = obtener_productos.map do |row|
+    {
+      id: row[0],
+      tipo: row[1],
+      cantidad: row[2],
+      descuento_porcentaje: row[3],
+      descuento: row[4],
+      venta_neta: row[5]
+    }
+  end
+  total_general = productos.sum { |producto| producto[:venta_neta] }
+  erb :index, locals: { productos: productos, total_general: total_general }
 end
 
 # Ruta para agregar un producto a la factura
@@ -45,30 +53,7 @@ post '/agregar_producto' do
 
   if cantidad > 0
     venta_bruta, descuento, venta_neta, descuento_porcentaje = calcular_descuento(tipo, cantidad)
-    settings.total_general += venta_neta
-    
-    # Comprobar si el producto ya está en la lista
-    existe = false
-    settings.productos.each do |producto|
-      if producto[:tipo] == tipo
-        producto[:cantidad] += cantidad
-        producto[:descuento] += descuento
-        producto[:venta_neta] += venta_neta
-        existe = true
-        break
-      end
-    end
-
-    # Si no existe, agregar nuevo
-    unless existe
-      settings.productos << {
-        tipo: tipo,
-        cantidad: cantidad,
-        descuento_porcentaje: descuento_porcentaje,
-        descuento: descuento,
-        venta_neta: venta_neta
-      }
-    end
+    agregar_producto(tipo, cantidad, descuento_porcentaje, descuento, venta_neta)
   end
 
   redirect '/'
@@ -76,41 +61,28 @@ end
 
 # Ruta para modificar la cantidad de un producto
 post '/modificar_cantidad' do
-    index = params[:index].to_i
-    nueva_cantidad = params[:cantidad].to_i
-  
-    if nueva_cantidad > 0
-      producto = settings.productos[index]
-      tipo = producto[:tipo]
-      _, descuento, venta_neta, descuento_porcentaje = calcular_descuento(tipo, nueva_cantidad)
-  
-      # Actualizar los valores del producto
-      settings.total_general -= producto[:venta_neta]
-      producto[:cantidad] = nueva_cantidad
-      producto[:descuento] = descuento
-      producto[:venta_neta] = venta_neta
-      producto[:descuento_porcentaje] = descuento_porcentaje
-      settings.total_general += venta_neta
-    end
-  
-    redirect '/'
+  id = params[:id].to_i
+  nueva_cantidad = params[:cantidad].to_i
+
+  if nueva_cantidad > 0
+    producto = obtener_productos.find { |p| p[0] == id }
+    tipo = producto[1]
+    _, descuento, venta_neta, descuento_porcentaje = calcular_descuento(tipo, nueva_cantidad)
+    modificar_producto(id, nueva_cantidad, descuento_porcentaje, descuento, venta_neta)
   end
-  
-  # Ruta para eliminar un producto
-  post '/eliminar_producto' do
-    index = params[:index].to_i
-  
-    # Resta el valor de venta neta del producto al total general
-    settings.total_general -= settings.productos[index][:venta_neta]
-    settings.productos.delete_at(index)
-  
-    redirect '/'
-  end
-  
+
+  redirect '/'
+end
+
+# Ruta para eliminar un producto
+post '/eliminar_producto' do
+  id = params[:id].to_i
+  eliminar_producto(id)
+  redirect '/'
+end
 
 # Ruta para finalizar la compra
 post '/finalizar_compra' do
-  settings.productos = []
-  settings.total_general = 0
+  limpiar_productos
   redirect '/'
 end

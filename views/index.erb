@@ -1,5 +1,3 @@
-
-
 <form action="/agregar_producto" method="post" class="form-inline">
   <label for="tipo" class="mr-2">Seleccione el tipo de compota:</label>
   <select name="tipo" id="tipo" class="form-control mr-3">
@@ -31,6 +29,7 @@
         <td><%= producto[:tipo] %></td>
         <td>
           <form action="/modificar_cantidad" method="post" class="form-inline">
+            <input type="hidden" name="id" value="<%= producto[:id] %>">
             <input type="hidden" name="index" value="<%= index %>">
             <input type="number" name="cantidad" value="<%= producto[:cantidad] %>" class="form-control mr-2" min="1">
             <button type="submit" class="btn btn-primary btn-sm">Modificar</button>
@@ -41,6 +40,7 @@
         <td>$<%= producto[:venta_neta] %></td>
         <td>
           <form action="/eliminar_producto" method="post">
+            <input type="hidden" name="id" value="<%= producto[:id] %>">
             <input type="hidden" name="index" value="<%= index %>">
             <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
           </form>
