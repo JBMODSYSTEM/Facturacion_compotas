@@ -1,12 +1,13 @@
-<form action="/agregar_producto" method="post" class="form-inline">
+<form action="/agregar_producto" method="post" class="form-inline" onsubmit="return validateForm()">
   <label for="tipo" class="mr-2">Seleccione el tipo de compota:</label>
-  <select name="tipo" id="tipo" class="form-control mr-3">
+  <select name="tipo" id="tipo" class="form-control mr-3" required>
+    <option value="">Seleccione...</option>
     <option value="Rostington">Rostington</option>
     <option value="Premiere">Premiere</option>
   </select>
 
   <label for="cantidad" class="mr-2">Ingrese la cantidad:</label>
-  <input type="number" name="cantidad" id="cantidad" class="form-control mr-3" required>
+  <input type="number" name="cantidad" id="cantidad" class="form-control mr-3" min="1" required>
 
   <button type="submit" class="btn btn-primary">Agregar Producto</button>
 </form>
@@ -26,21 +27,21 @@
   <tbody>
     <% productos.each_with_index do |producto, index| %>
       <tr>
-        <td><%= producto[:tipo] %></td>
+        <td><%= producto.tipo %></td>
         <td>
           <form action="/modificar_cantidad" method="post" class="form-inline">
-            <input type="hidden" name="id" value="<%= producto[:id] %>">
+            <input type="hidden" name="id" value="<%= producto.id %>">
             <input type="hidden" name="index" value="<%= index %>">
-            <input type="number" name="cantidad" value="<%= producto[:cantidad] %>" class="form-control mr-2" min="1">
+            <input type="number" name="cantidad" value="<%= producto.cantidad %>" class="form-control mr-2" min="1">
             <button type="submit" class="btn btn-primary btn-sm">Modificar</button>
           </form>
         </td>
-        <td><%= producto[:descuento_porcentaje] %> %</td>
-        <td>$<%= producto[:descuento] %></td>
-        <td>$<%= producto[:venta_neta] %></td>
+        <td><%= producto.descuento_porcentaje %> %</td>
+        <td>$<%= producto.descuento %></td>
+        <td>$<%= producto.venta_neta %></td>
         <td>
           <form action="/eliminar_producto" method="post">
-            <input type="hidden" name="id" value="<%= producto[:id] %>">
+            <input type="hidden" name="id" value="<%= producto.id %>">
             <input type="hidden" name="index" value="<%= index %>">
             <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
           </form>
@@ -82,10 +83,10 @@
           <tbody>
             <% productos.each do |producto| %>
               <tr>
-                <td><%= producto[:tipo] %></td>
-                <td><%= producto[:cantidad] %></td>
-                <td><%= producto[:tipo] == "Rostington" ? "$5000" : "$10000" %></td>
-                <td>$<%= producto[:venta_neta] %></td>
+                <td><%= producto.tipo %></td>
+                <td><%= producto.cantidad %></td>
+                <td><%= producto.tipo == "Rostington" ? "$5000" : "$10000" %></td>
+                <td>$<%= producto.venta_neta %></td>
               </tr>
             <% end %>
           </tbody>
@@ -101,3 +102,22 @@
     </div>
   </div>
 </div>
+
+<script>
+  function validateForm() {
+    const tipo = document.getElementById('tipo').value;
+    const cantidad = document.getElementById('cantidad').value;
+
+    if (!tipo) {
+      alert('Seleccione un tipo de compota válido.');
+      return false;
+    }
+
+    if (cantidad <= 0) {
+      alert('Ingrese una cantidad mayor a cero.');
+      return false;
+    }
+
+    return true;
+  }
+</script>

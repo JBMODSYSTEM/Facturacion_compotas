@@ -13,18 +13,26 @@ DB.execute <<-SQL
   );
 SQL
 
-def agregar_producto(tipo, cantidad, descuento_porcentaje, descuento, venta_neta)
+def agregar_producto(producto)
   DB.execute("INSERT INTO productos (tipo, cantidad, descuento_porcentaje, descuento, venta_neta) VALUES (?, ?, ?, ?, ?)",
-             [tipo, cantidad, descuento_porcentaje, descuento, venta_neta])
+             [producto.tipo, producto.cantidad, producto.descuento_porcentaje, producto.descuento, producto.venta_neta])
 end
 
 def obtener_productos
-  DB.execute("SELECT * FROM productos")
+  DB.execute("SELECT * FROM productos").map do |row|
+    tipo = row[1]
+    case tipo
+    when "Rostington"
+      Rostington.new(row[0], row[2], row[3], row[4], row[5])
+    when "Premiere"
+      Premiere.new(row[0], row[2], row[3], row[4], row[5])
+    end
+  end
 end
 
-def modificar_producto(id, cantidad, descuento_porcentaje, descuento, venta_neta)
+def modificar_producto(producto)
   DB.execute("UPDATE productos SET cantidad = ?, descuento_porcentaje = ?, descuento = ?, venta_neta = ? WHERE id = ?",
-             [cantidad, descuento_porcentaje, descuento, venta_neta, id])
+             [producto.cantidad, producto.descuento_porcentaje, producto.descuento, producto.venta_neta, producto.id])
 end
 
 def eliminar_producto(id)

@@ -2,6 +2,7 @@
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require_relative 'db/compotasdb'
+require_relative 'models/producto'
 
 # Método para calcular el descuento y la venta neta
 def calcular_descuento(tipo, cantidad)
@@ -32,17 +33,8 @@ end
 
 # Ruta principal para mostrar la interfaz de compra
 get '/' do
-  productos = obtener_productos.map do |row|
-    {
-      id: row[0],
-      tipo: row[1],
-      cantidad: row[2],
-      descuento_porcentaje: row[3],
-      descuento: row[4],
-      venta_neta: row[5]
-    }
-  end
-  total_general = productos.sum { |producto| producto[:venta_neta] }
+  productos = obtener_productos
+  total_general = productos.sum(&:venta_neta)
   erb :index, locals: { productos: productos, total_general: total_general }
 end
 
@@ -51,9 +43,24 @@ post '/agregar_producto' do
   tipo = params[:tipo]
   cantidad = params[:cantidad].to_i
 
-  if cantidad > 0
-    venta_bruta, descuento, venta_neta, descuento_porcentaje = calcular_descuento(tipo, cantidad)
-    agregar_producto(tipo, cantidad, descuento_porcentaje, descuento, venta_neta)
+  if cantidad > 0 && ["Rostington", "Premiere"].include?(tipo)
+    productos = obtener_productos
+    producto_existente = productos.find { |p| p.tipo == tipo }
+
+    if producto_existente
+      producto_existente.cantidad += cantidad
+      modificar_producto(producto_existente)
+    else
+      producto = case tipo
+                 when "Rostington"
+                   Rostington.new(nil, cantidad)
+                 when "Premiere"
+                   Premiere.new(nil, cantidad)
+                 end
+      agregar_producto(producto)
+    end
+  else
+    halt 400, "Datos inválidos"
   end
 
   redirect '/'
@@ -65,10 +72,11 @@ post '/modificar_cantidad' do
   nueva_cantidad = params[:cantidad].to_i
 
   if nueva_cantidad > 0
-    producto = obtener_productos.find { |p| p[0] == id }
-    tipo = producto[1]
-    _, descuento, venta_neta, descuento_porcentaje = calcular_descuento(tipo, nueva_cantidad)
-    modificar_producto(id, nueva_cantidad, descuento_porcentaje, descuento, venta_neta)
+    producto = obtener_productos.find { |p| p.id == id }
+    producto.cantidad = nueva_cantidad
+    modificar_producto(producto)
+  else
+    halt 400, "Cantidad inválida"
   end
 
   redirect '/'
